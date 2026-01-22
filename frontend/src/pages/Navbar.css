@@ -1,3 +1,6 @@
+/* ===============================
+   NAVBAR BASE
+================================ */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -15,7 +18,9 @@
   font-weight: 600;
 }
 
-/* Nav links container */
+/* ===============================
+   NAV LINKS CONTAINER
+================================ */
 .nav-links {
   display: flex;
   flex-wrap: wrap;
@@ -23,23 +28,88 @@
   margin-top: 0.5rem;
 }
 
-/* Individual nav links */
-.nav-links a {
+/* ===============================
+   NAV ITEMS
+================================ */
+.nav-links a,
+.nav-item {
   color: #fff;
   margin-left: 1rem;
   text-decoration: none;
   font-weight: 600;
   padding: 8px 12px;
   border-radius: 8px;
-  transition: background 0.3s;
+  transition: background 0.3s, transform 0.3s, color 0.3s;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-item:hover {
   background-color: #f39c12;
   color: #000;
+  transform: translateY(-2px);
 }
 
-/* Responsive Breakpoint for Tablets and Below */
+.nav-item.active {
+  border-bottom: 2px solid #60a5fa;
+}
+
+/* ===============================
+   🔴 24×7 EMERGENCY CALL BUTTON
+================================ */
+.emergency-call {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white !important;
+  padding: 8px 14px;
+  border-radius: 30px;
+  font-weight: bold;
+  margin-left: 1rem;
+  box-shadow: 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: pulseRing 1.6s infinite;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.emergency-call:hover {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  color: #fff !important;
+  transform: scale(1.05);
+}
+
+/* 🔔 PULSE ANIMATION */
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* ===============================
+   LOGOUT BUTTON
+================================ */
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px;
+  transition: color 0.3s, transform 0.3s;
+}
+
+.logout-btn:hover {
+  color: #f87171;
+  transform: translateY(-2px);
+}
+
+/* ===============================
+   RESPONSIVE — TABLETS
+================================ */
 @media screen and (max-width: 768px) {
   .navbar {
     flex-direction: column;
@@ -57,14 +127,19 @@
     width: 100%;
   }
 
-  .nav-links a {
+  .nav-links a,
+  .nav-item,
+  .emergency-call {
     margin: 0.3rem 0;
     width: 100%;
     text-align: left;
+    justify-content: center;
   }
 }
 
-/* Responsive Breakpoint for Small Devices */
+/* ===============================
+   RESPONSIVE — SMALL DEVICES
+================================ */
 @media screen and (max-width: 480px) {
   .navbar {
     padding: 0.8rem 1rem;
@@ -74,8 +149,41 @@
     font-size: 1.2rem;
   }
 
-  .nav-links a {
+  .nav-links a,
+  .nav-item {
     font-size: 0.95rem;
     padding: 6px 10px;
   }
+
+  .emergency-call {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+  }
+}
+/* 🔔 Notification Bell spacing */
+.notification-bell {
+  margin-left: 12px;
+}
+
+/* 📞 Emergency Call Styling */
+.emergency-call {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: white !important;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulse 1.5s infinite;
+}
+
+.call-number {
+  margin-left: 4px;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
 }

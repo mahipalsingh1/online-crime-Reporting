@@ -1,354 +1,252 @@
-import React, { useState, useEffect } from 'react';
-import 'jspdf-autotable';
+import React, { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import api from "../api/axios";
 
 function ViewComplaints({ currentUser }) {
   const [complaints, setComplaints] = useState([]);
-  const [selectedComplaintId, setSelectedComplaintId] = useState(null);
-  const [statusInputs, setStatusInputs] = useState({});
-  const [complaintIdToUpdate, setComplaintIdToUpdate] = useState('');
-  const [updateError, setUpdateError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const storedComplaints = JSON.parse(localStorage.getItem('complaints')) || [];
-    setComplaints(storedComplaints);
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) {
-      const storedUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (storedUser) window.location.reload();
-    }
-  }, [currentUser]);
-
-  const isPoliceUser = currentUser?.role === 'Police';
-  const isPublicUser = currentUser?.role === 'Public';
-
-  const filteredComplaints = complaints.filter((complaint) => {
-    if (isPublicUser) return complaint.username === currentUser.username;
-    return true;
+  const [updateData, setUpdateData] = useState({
+    status: "",
+    officer: "",
+    remarks: ""
   });
 
-  const handleInputChange = (id, field, value) => {
-    setStatusInputs((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value
+  const role = currentUser?.role;
+  const username = currentUser?.username;
+
+  const isPublicUser = role === "Public";
+  const isPoliceUser = role === "Police";
+  const isAdminUser = role === "Admin";
+
+  /* =========================
+     FETCH COMPLAINTS
+  ========================= */
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchComplaints = async () => {
+      try {
+        const res = isPublicUser
+          ? await api.get(`/complaints/user/${username}`)
+          : await api.get("/complaints/view");
+
+        setComplaints(res.data);
+      } catch {
+        setError("Failed to load complaints");
+      } finally {
+        setLoading(false);
       }
-    }));
+    };
+
+    fetchComplaints();
+  }, [currentUser, isPublicUser, username]);
+
+  /* =========================
+     UPDATE COMPLAINT
+  ========================= */
+  const handleUpdate = async (id) => {
+    try {
+      await api.put(`/complaints/update/${id}`, updateData);
+      alert("Complaint updated successfully");
+      window.location.reload();
+    } catch {
+      alert("Update failed");
+    }
   };
 
-  const handleStatusUpdate = (complaintId) => {
-    const timestamp = new Date().toLocaleString();
-    const inputs = statusInputs[complaintId];
-    if (!inputs) return;
-
-    const updatedComplaints = complaints.map((complaint) => {
-      if (complaint.complaint_id === complaintId) {
-        const historyEntry = {
-          status: inputs.status || complaint.status,
-          officer: inputs.officer || complaint.officer,
-          description: inputs.description || complaint.description,
-          timestamp,
-        };
-
-        return {
-          ...complaint,
-          status: historyEntry.status,
-          officer: historyEntry.officer,
-          description: historyEntry.description,
-          history: [...(complaint.history || []), historyEntry],
-          newUpdateForUser: true,
-        };
-      }
-      return complaint;
-    });
-
-    setComplaints(updatedComplaints);
-    localStorage.setItem('complaints', JSON.stringify(updatedComplaints));
-    setSelectedComplaintId(null);
-    setComplaintIdToUpdate('');
-    setUpdateError('');
-  };
-
-  const getStatusClass = (status) => {
+  /* =========================
+     STATUS STYLE
+  ========================= */
+  const getStatusClass = (status = "Pending") => {
     switch (status) {
-      case 'Solved':
-        return 'status-badge green';
-      case 'Under Investigation':
-        return 'status-badge yellow';
-      case 'Invalid':
-        return 'status-badge red';
-      default:
-        return 'status-badge gray';
+      case "Solved": return "status green";
+      case "Under Investigation": return "status yellow";
+      case "Invalid": return "status red";
+      default: return "status gray";
     }
   };
 
-  const handleUpdateStatusClick = () => {
-    const complaintIdStripped = complaintIdToUpdate.replace(/^C-/, '');
-    const complaintId = parseInt(complaintIdStripped, 10);
-
-    if (!complaintId || isNaN(complaintId)) {
-      setUpdateError('Please provide a valid Complaint ID.');
-      return;
-    }
-
-    const complaintExists = complaints.some((complaint) => complaint.complaint_id === `C-${complaintId}`);
-    if (!complaintExists) {
-      setUpdateError('Complaint ID not found.');
-      return;
-    }
-
-    setSelectedComplaintId(`C-${complaintId}`);
-    setUpdateError('');
-  };
-
-  // Export complaint as PDF - only for public users
+  /* =========================
+     EXPORT PDF
+  ========================= */
   const exportComplaintAsPDF = (complaint) => {
     const doc = new jsPDF();
-
     doc.setFontSize(18);
-    doc.text('Registered Complaint Details', 14, 22);
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-
-    const message = "This document contains the details of the complaint you registered. Please keep it for your records.";
-
-    const tableColumn = ['Field', 'Information'];
-    const tableRows = [
-      ['Complaint-Id', complaint.complaint_id],
-      ['Name', complaint.name],
-      ['Email', complaint.email],
-      ['Mobile No.', complaint.mobile || 'N/A'],
-      ['Date', complaint.date || 'N/A'],
-      ['Location', complaint.location || 'N/A'],
-      ['Crime Type', complaint.crimeType],
-      ['IPC Section', complaint.ipcSection],
-      ['Description', complaint.description || 'N/A'],
-    ];
+    doc.text("Crime Complaint Details", 14, 20);
 
     autoTable(doc, {
       startY: 30,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [40, 116, 166] }
+      head: [["Field", "Details"]],
+      body: [
+        ["Complaint ID", complaint._id],
+        ["Name", complaint.name],
+        ["Mobile", complaint.mobile],
+        ["Location", complaint.location],
+        ["Crime Type", complaint.crimeType],
+        ["IPC Section", complaint.ipcSection],
+        ["Description", complaint.detail],
+        ["Status", complaint.status],
+        ["Officer", complaint.officer || "N/A"],
+        ["Remarks", complaint.remarks || "N/A"]
+      ]
     });
 
-    doc.text(message, 14, doc.lastAutoTable.finalY + 10);
+    doc.save(`Complaint_${complaint._id}.pdf`);
+  };
 
-    doc.save(`Complaint_${complaint.complaint_id}.pdf`);
+  /* =========================
+     MAP URL BUILDER (FREE)
+  ========================= */
+  const getMapURL = (c) => {
+    if (c.latitude && c.longitude) {
+      return `https://maps.google.com/maps?q=${c.latitude},${c.longitude}&z=14&output=embed`;
+    }
+    return `https://maps.google.com/maps?q=${encodeURIComponent(c.location || "India")}&z=13&output=embed`;
   };
 
   return (
-    <div className="rainbow-bg">
+    <div className="container">
       <style>{`
-        .rainbow-bg {
+        .container {
           min-height: 100vh;
-          padding: 40px 20px;
-          background: linear-gradient(-45deg, red, orange, yellow, green, blue, indigo, violet);
-          background-size: 400% 400%;
-          animation: rainbowShift 10s ease infinite;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+          padding: 30px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          font-family: Arial;
         }
-
-        @keyframes rainbowShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-
         h2 {
-          color: #ffffff;
-          font-size: 2rem;
-          margin-bottom: 30px;
-          text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+          color: white;
+          text-align: center;
+          margin-bottom: 20px;
         }
-
-        .complaint-card, .status-box {
-          background-color: rgba(255, 255, 255, 0.95);
-          border-radius: 15px;
+        .card {
+          background: white;
           padding: 20px;
-          margin: 15px 0;
-          width: 90%;
-          max-width: 700px;
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          border-radius: 14px;
+          margin-bottom: 25px;
+          max-width: 800px;
+          margin-left: auto;
+          margin-right: auto;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+          animation: fadeUp 0.4s ease;
         }
-
-        .complaint-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+        @keyframes fadeUp {
+          from { opacity:0; transform:translateY(15px); }
+          to { opacity:1; transform:translateY(0); }
         }
-
-        .complaint-card p,
-        .status-box p {
-          margin: 6px 0;
-          color: #000;
-        }
-
-        label {
+        .status {
+          padding: 4px 12px;
+          border-radius: 14px;
+          color: white;
           font-weight: bold;
-          display: block;
-          margin: 12px 0 5px;
+        }
+        .green { background:#38a169; }
+        .yellow { background:#d69e2e; }
+        .red { background:#e53e3e; }
+        .gray { background:#718096; }
+
+        iframe {
+          width: 100%;
+          height: 220px;
+          border-radius: 12px;
+          margin-top: 12px;
+          border: 1px solid #ccc;
         }
 
         select, input, textarea {
           width: 100%;
-          padding: 10px;
-          margin-bottom: 15px;
+          margin-top: 8px;
+          padding: 8px;
+          border-radius: 8px;
           border: 1px solid #ccc;
-          border-radius: 6px;
-          font-size: 1rem;
         }
 
         button {
-          padding: 10px 20px;
           margin-top: 10px;
+          padding: 10px;
           border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: bold;
-          background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-          background-size: 300% 300%;
-          animation: rainbowButton 5s linear infinite;
+          border-radius: 8px;
+          background: #003366;
           color: white;
-          transition: transform 0.2s ease;
+          cursor: pointer;
+          transition: 0.3s;
         }
 
         button:hover {
-          transform: scale(1.05);
+          background: #00509e;
         }
 
-        .status-badge {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-weight: bold;
+        .error {
           color: white;
-        }
-
-        .green { background-color: #38a169; }
-        .yellow { background-color: #d69e2e; }
-        .red { background-color: #e53e3e; }
-        .gray { background-color: #718096; }
-
-        p.no-data {
           text-align: center;
-          color: white;
-          font-size: 1.2rem;
-          font-weight: bold;
-        }
-
-        .error-message {
-          color: red;
-          font-weight: bold;
-        }
-
-        .history {
-          margin-top: 15px;
-          background: #f7f7f7;
-          border-radius: 10px;
-          padding: 10px;
-        }
-
-        .history h4 {
-          margin-bottom: 10px;
-          color: #333;
-        }
-
-        .history li {
-          margin-bottom: 8px;
         }
       `}</style>
 
-      <h2>{isPublicUser ? 'My Complaints' : 'All Complaints'}</h2>
+      <h2>{isPublicUser ? "My Complaints" : "All Complaints"}</h2>
 
-      {isPoliceUser && (
-        <div className="status-box">
-          <h3>Update Complaint Status</h3>
-          <label>Enter Complaint ID:</label>
-          <input
-            type="text"
-            placeholder="Complaint ID"
-            value={complaintIdToUpdate}
-            onChange={(e) => setComplaintIdToUpdate(e.target.value)}
+      {loading && <p className="error">Loading...</p>}
+      {error && <p className="error">{error}</p>}
+
+      {complaints.map((c) => (
+        <div key={c._id} className="card">
+          <p><b>Complaint ID:</b> {c._id}</p>
+          <p><b>Name:</b> {c.name}</p>
+          <p><b>Crime:</b> {c.crimeType}</p>
+          <p>
+            <b>Status:</b>{" "}
+            <span className={getStatusClass(c.status)}>
+              {c.status}
+            </span>
+          </p>
+
+          {/* 🗺️ MAP VIEW */}
+          <iframe
+            src={getMapURL(c)}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
           />
-          <button onClick={handleUpdateStatusClick}>Search Complaint</button>
-          {updateError && <p className="error-message">{updateError}</p>}
-        </div>
-      )}
 
-      {filteredComplaints.length === 0 ? (
-        <p className="no-data">No complaints found.</p>
-      ) : (
-        filteredComplaints.map((complaint) => (
-          <div key={complaint.complaint_id} className="complaint-card">
-            <p><strong>Complaint ID:</strong> {complaint.complaint_id}</p>
-            <p><strong>Name:</strong> {complaint.name}</p>
-            <p><strong>Email:</strong> {complaint.email}</p>
-            <p><strong>Crime Type:</strong> {complaint.crimeType}</p>
-            <p><strong>IPC Section:</strong> {complaint.ipcSection}</p>
-            <p><strong>Description:</strong> {complaint.description}</p>
-            <p><strong>Status:</strong> <span className={getStatusClass(complaint.status)}>{complaint.status}</span></p>
+          {/* PUBLIC */}
+          {isPublicUser && (
+            <button onClick={() => exportComplaintAsPDF(c)}>
+              Export PDF
+            </button>
+          )}
 
-            {/* Show Export PDF only for Public users */}
-            {isPublicUser && (
-              <button onClick={() => exportComplaintAsPDF(complaint)}>
-                Export PDF
+          {/* POLICE / ADMIN */}
+          {(isPoliceUser || isAdminUser) && (
+            <>
+              <select onChange={(e) =>
+                setUpdateData({ ...updateData, status: e.target.value })}
+              >
+                <option value="">Select Status</option>
+                <option>Pending</option>
+                <option>Under Investigation</option>
+                <option>Solved</option>
+                <option>Invalid</option>
+              </select>
+
+              <input
+                placeholder="Officer Name"
+                onChange={(e) =>
+                  setUpdateData({ ...updateData, officer: e.target.value })}
+              />
+
+              <textarea
+                placeholder="Remarks"
+                onChange={(e) =>
+                  setUpdateData({ ...updateData, remarks: e.target.value })}
+              />
+
+              <button onClick={() => handleUpdate(c._id)}>
+                Update Complaint
               </button>
-            )}
-
-            {selectedComplaintId === complaint.complaint_id && isPoliceUser && (
-              <div className="status-box">
-                <label>Assign Officer:</label>
-                <input
-                  type="text"
-                  placeholder="Officer Name"
-                  value={statusInputs[complaint.complaint_id]?.officer || ''}
-                  onChange={(e) => handleInputChange(complaint.complaint_id, 'officer', e.target.value)}
-                />
-                <label>Update Status:</label>
-                <select
-                  value={statusInputs[complaint.complaint_id]?.status || ''}
-                  onChange={(e) => handleInputChange(complaint.complaint_id, 'status', e.target.value)}
-                >
-                  <option value="">Select Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Under Investigation">Under Investigation</option>
-                  <option value="Solved">Solved</option>
-                  <option value="Invalid">Invalid</option>
-                </select>
-                <label>Description:</label>
-                <textarea
-                  placeholder="Update description"
-                  value={statusInputs[complaint.complaint_id]?.description || ''}
-                  onChange={(e) => handleInputChange(complaint.complaint_id, 'description', e.target.value)}
-                />
-                <button onClick={() => handleStatusUpdate(complaint.complaint_id)}>Update Status</button>
-              </div>
-            )}
-
-            {complaint.history && complaint.history.length > 0 && (
-              <div className="history">
-                <h4>History</h4>
-                <ul>
-                  {complaint.history.map((entry, idx) => (
-                    <li key={idx}>
-                      <strong>Status:</strong> {entry.status}, <strong>Officer:</strong> {entry.officer}, <strong>Description:</strong> {entry.description}, <em>{entry.timestamp}</em>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        ))
-      )}
+            </>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

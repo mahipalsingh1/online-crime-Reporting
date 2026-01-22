@@ -1,38 +1,51 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Login.js
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function Login({ onLogin = () => {} }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Public');
-  const [policeId, setPoliceId] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("Public"); // UI only
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem('users')) || [];
 
-    const user = users.find(
-      (u) =>
-        u.username === username &&
-        u.password === password &&
-        u.role === role
-    );
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        { email, password }
+      );
 
-    if (!user) {
-      alert('Invalid username or password');
-      return;
+      const { token, role: backendRole, user } = res.data;
+
+      // ✅ Normalize role (backend sends lowercase)
+      const normalizedRole =
+        backendRole.charAt(0).toUpperCase() + backendRole.slice(1);
+
+      // ✅ STORE FULL USER OBJECT FROM BACKEND (FIXES PROFILE)
+      const userData = {
+        ...user,            // name, dob, gender, mobile, email, username
+        role: normalizedRole,
+        token
+      };
+
+      localStorage.setItem("currentUser", JSON.stringify(userData));
+      onLogin(userData);
+
+      alert("Login successful");
+
+      // ✅ Role-based navigation
+      if (normalizedRole === "Admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+
+    } catch (err) {
+      alert(err.response?.data?.message || "Login failed");
     }
-
-    if (role === 'Police' && user.policeId !== policeId) {
-      alert('Invalid Police ID');
-      return;
-    }
-
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    onLogin(user);
-    alert('Login successful!');
-    navigate('/dashboard');
   };
 
   return (
@@ -60,7 +73,7 @@ function Login({ onLogin = () => {} }) {
           padding: 30px;
           border-radius: 12px;
           box-shadow: 0 0 15px rgba(0,0,0,0.2);
-          width: 300px;
+          width: 320px;
           text-align: center;
         }
 
@@ -95,14 +108,17 @@ function Login({ onLogin = () => {} }) {
       <div className="rainbow-bg">
         <div className="login-box">
           <h2>Login</h2>
+
           <form onSubmit={handleLogin}>
+            {/* ✅ FIX: Admin does NOT require email validation */}
             <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type={role === "Admin" ? "text" : "email"}
+              placeholder={role === "Admin" ? "Admin ID" : "Email"}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
+
             <input
               type="password"
               placeholder="Password"
@@ -110,19 +126,14 @@ function Login({ onLogin = () => {} }) {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
+            {/* UI only – backend decides actual role */}
             <select value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="Public">Public</option>
               <option value="Police">Police</option>
+              <option value="Admin">Admin</option>
             </select>
-            {role === 'Police' && (
-              <input
-                type="text"
-                placeholder="Enter Police ID"
-                value={policeId}
-                onChange={(e) => setPoliceId(e.target.value)}
-                required
-              />
-            )}
+
             <button type="submit">Login</button>
           </form>
         </div>

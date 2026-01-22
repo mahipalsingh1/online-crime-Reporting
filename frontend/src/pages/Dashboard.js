@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from "../api/axios";
 
+/* =========================
+   IPC MAPPING
+========================= */
 const crimeIpcMapping = {
   "Chain Snatching": "IPC Section 356",
   "Pickpocketing": "IPC Section 379",
@@ -29,11 +33,14 @@ const crimeIpcMapping = {
   "Credit Card Fraud": "IT Act Section 66C and 66D"
 };
 
+function Dashboard({ user }) {
+  const navigate = useNavigate();
 
-function Dashboard({ user, onRegister }) {
   const [form, setForm] = useState({
     name: '',
     location: '',
+    latitude: '',
+    longitude: '',
     crimeType: '',
     ipcSection: '',
     detail: '',
@@ -41,160 +48,163 @@ function Dashboard({ user, onRegister }) {
     date: '',
     mobile: ''
   });
+
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
+    if (!user) navigate('/login');
   }, [user, navigate]);
 
+  /* =========================
+     HANDLE INPUT
+  ========================= */
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    let updatedForm = { ...form, [name]: name === 'evidence' ? files[0]?.name || '' : value };
-    if (name === 'crimeType') {
-      updatedForm.ipcSection = crimeIpcMapping[value] || '';
+
+    let updated = {
+      ...form,
+      [name]: name === "evidence" ? files?.[0]?.name || "" : value
+    };
+
+    if (name === "crimeType") {
+      updated.ipcSection = crimeIpcMapping[value] || "";
     }
-    setForm(updatedForm);
+
+    setForm(updated);
   };
 
-  const handleSubmit = (e) => {
+  /* =========================
+     SUBMIT
+  ========================= */
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    if (!user) {
-      navigate('/login');
+    if (!/^[0-9]{10}$/.test(form.mobile)) {
+      setError("Enter valid 10-digit mobile number");
       return;
     }
 
-    // Mobile number validation (example: 10-digit number)
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!form.mobile) {
-      setError('Mobile number is required.');
-      return;
-    }
-    if (!mobileRegex.test(form.mobile)) {
-      setError('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-
-    // Validation for other fields
     if (!form.name || !form.location || !form.detail) {
-      setError('Please fill in all required fields.');
+      setError("All required fields must be filled");
       return;
     }
 
-    // Generate a unique complaint_id based on timestamp or any other method
-    const complaint_id = `C-${Date.now()}`;
+    try {
+      setLoading(true);
 
-    // Add complaint_id to the complaint
-    const newComplaint = { ...form, username: user.username, complaint_id };
+      await api.post("/complaints/register", {
+        ...form,
+        username: user.username
+      });
 
-    const existingComplaints = JSON.parse(localStorage.getItem('complaints')) || [];
-    const updatedComplaints = [...existingComplaints, newComplaint];
+      alert("Complaint registered successfully!");
+      navigate("/viewcomplaints");
 
-    localStorage.setItem('complaints', JSON.stringify(updatedComplaints));
-    if (onRegister) onRegister(newComplaint);
-
-    alert("Complaint registered successfully!");
-    navigate('/viewcomplaints');
+    } catch (err) {
+      setError("Failed to submit complaint");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="page">
-      <style>
-        {`
-          .page {
-            font-family: Arial, sans-serif;
-            min-height: 100vh;
-            padding: 40px 20px;
-            background: linear-gradient(270deg, #ff9a9e, #fad0c4, #fbc2eb, #a1c4fd, #c2e9fb, #84fab0, #8fd3f4);
-            background-size: 1400% 1400%;
-            animation: rainbowFlow 18s ease infinite;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-          }
+      <style>{`
+        .page {
+          min-height: 100vh;
+          padding: 40px 20px;
+          background: linear-gradient(270deg,#ff9a9e,#fad0c4,#a1c4fd,#c2e9fb);
+          background-size: 600% 600%;
+          animation: bgFlow 18s ease infinite;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
 
-          @keyframes rainbowFlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
+        @keyframes bgFlow {
+          0% {background-position:0% 50%}
+          50% {background-position:100% 50%}
+          100% {background-position:0% 50%}
+        }
 
-          h2 {
-            color: #003366;
-            margin-bottom: 20px;
-            text-shadow: 1px 1px 2px #fff;
-            font-size: 2rem;
-          }
+        form {
+          background: white;
+          padding: 25px;
+          border-radius: 16px;
+          max-width: 520px;
+          width: 100%;
+          box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+        }
 
-          form {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 25px 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            max-width: 500px;
-            width: 100%;
-          }
+        input, select, textarea {
+          width: 100%;
+          padding: 10px;
+          margin-bottom: 12px;
+          border-radius: 8px;
+          border: 1px solid #ccc;
+        }
 
-          input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 1rem;
-          }
+        iframe {
+          width: 100%;
+          height: 250px;
+          border-radius: 12px;
+          margin-bottom: 15px;
+          border: 1px solid #ccc;
+        }
 
-          button {
-            width: 100%;
-            background-color: #003366;
-            color: white;
-            padding: 12px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-          }
+        button {
+          width: 100%;
+          padding: 12px;
+          background: #003366;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 1.05rem;
+          cursor: pointer;
+        }
 
-          button:hover {
-            background-color: #00509e;
-          }
-
-          .error-message {
-            color: red;
-            font-size: 0.9rem;
-            margin-top: 10px;
-          }
-        `}
-      </style>
+        button:hover { background:#00509e }
+        .error { color:red; margin-bottom:10px }
+      `}</style>
 
       <h2>Register a Complaint</h2>
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error">{error}</div>}
+
       <form onSubmit={handleSubmit}>
-        <input type="text" name="name" placeholder="Complainant's Name" onChange={handleChange} required />
-        <input type="text" name="location" placeholder="Crime Location" onChange={handleChange} required />
-        <select name="crimeType" onChange={handleChange} required>
+        <input name="name" placeholder="Complainant Name" value={form.name} onChange={handleChange} required />
+        <input name="location" placeholder="Crime Location (Area / City)" value={form.location} onChange={handleChange} required />
+
+        {/* 🔹 GOOGLE MAP (FREE) */}
+        <iframe
+          src={`https://maps.google.com/maps?q=${encodeURIComponent(form.location || "India")}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+          loading="lazy"
+        />
+
+        <input name="latitude" placeholder="Latitude (optional)" value={form.latitude} onChange={handleChange} />
+        <input name="longitude" placeholder="Longitude (optional)" value={form.longitude} onChange={handleChange} />
+
+        <select name="crimeType" value={form.crimeType} onChange={handleChange} required>
           <option value="">Select Crime Type</option>
-          {Object.keys(crimeIpcMapping).map((crime) => (
-            <option key={crime} value={crime}>{crime}</option>
+          {Object.keys(crimeIpcMapping).map(c => (
+            <option key={c}>{c}</option>
           ))}
         </select>
-        <input type="text" name="ipcSection" value={form.ipcSection} placeholder="IPC Section" readOnly />
-        <textarea name="detail" placeholder="Crime Details" onChange={handleChange} required />
-        <input type="file" name="evidence" onChange={handleChange} />
-        <input
-  type="date"
-  name="date"
-  onChange={handleChange}
-  required
-  max={new Date().toISOString().split("T")[0]}
-/>
 
-        <input type="tel" name="mobile" placeholder="Your Mobile Number" onChange={handleChange} required />
-        <button type="submit">Submit Complaint</button>
+        <input value={form.ipcSection} readOnly placeholder="IPC Section" />
+        <textarea name="detail" placeholder="Crime Details" value={form.detail} onChange={handleChange} required />
+        <input type="file" name="evidence" onChange={handleChange} />
+
+        <input type="date" name="date" value={form.date}
+          max={new Date().toISOString().split("T")[0]}
+          onChange={handleChange} required />
+
+        <input name="mobile" placeholder="Mobile Number" value={form.mobile} onChange={handleChange} required />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Submitting..." : "Submit Complaint"}
+        </button>
       </form>
     </div>
   );

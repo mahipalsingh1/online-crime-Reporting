@@ -1,123 +1,177 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import Navbar from './pages/Navbar';
-import axios from 'axios'; 
-import Home from './pages/Home';
-import SignUp from './pages/Signup';
-import Login from './pages/Login';
-import Profile from './pages/Profile';
-import Dashboard from './pages/Dashboard';
-import ViewComplaints from './pages/ViewComplaints';
-import UpdateStatus from './pages/UpdateStatus';
-import IPCSection from './components/ipcSection';
-import Child from './components/Child'; // Ensure correct path here
-import WomenSafety from './components/WomenSafety';
-import CyberSecurity from './components/CyberSecurity';
+// App.js
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate
+} from "react-router-dom";
 
+// Layout
+import Navbar from "./pages/Navbar";
 
+// ✅ CHATBOT
+import Chatbot from "./components/chatbot/Chatbot";
 
+// Public pages
+import Home from "./pages/Home";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+
+// User pages
+import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
+import ViewComplaints from "./pages/ViewComplaints";
+
+// ✅ ADMIN
+import AdminDashboard from "./pages/admin/AdminDashboard";
+
+// Static pages
+import IPCSection from "./components/ipcSection";
+import Child from "./components/Child";
+import WomenSafety from "./components/WomenSafety";
+import CyberSecurity from "./components/CyberSecurity";
 
 function App() {
-  const [complaints, setComplaints] = useState(() => JSON.parse(localStorage.getItem('complaints')) || []);
-  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('currentUser')) || null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /* =========================
+     LOAD USER FROM STORAGE
+  ========================= */
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (storedUser) {
-      setCurrentUser(storedUser);
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("currentUser"));
+      if (storedUser && storedUser.token) {
+        setCurrentUser(storedUser);
+      }
+    } catch (err) {
+      console.error("Failed to parse stored user");
+      localStorage.removeItem("currentUser");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    localStorage.setItem('complaints', JSON.stringify(complaints));
-  }, [currentUser, complaints]);
-
-  const handleRegisterComplaint = async (newComplaint) => {
-    try {
-      const response = await axios.post("http://localhost:5000/api/complaints", newComplaint); // ✅ POST moved here with correct data
-      const savedComplaint = response.data;
-      const updatedComplaints = [...complaints, savedComplaint];
-      setComplaints(updatedComplaints);
-    } catch (error) {
-      console.error("Error posting complaint:", error);
-    }
-  };
+  /* =========================
+     LOGIN / LOGOUT
+  ========================= */
   const handleLogin = (user) => {
     setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    localStorage.setItem("currentUser", JSON.stringify(user));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem("currentUser");
   };
 
-  const updateComplaintStatus = (index, updatedFields) => {
-    const updatedComplaints = [...complaints];
-    updatedComplaints[index] = { ...updatedComplaints[index], ...updatedFields };
-    setComplaints(updatedComplaints);
+  /* =========================
+     ROUTE GUARDS
+  ========================= */
+  const ProtectedRoute = ({ children }) => {
+    if (loading) {
+      return (
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          Loading...
+        </div>
+      );
+    }
+
+    if (!currentUser) {
+      return <Navigate to="/login" />;
+    }
+
+    return children;
   };
 
-  const ProtectedRoute = ({ element }) => {
-    if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>;
-    return currentUser ? element : <Navigate to="/login" />;
+  const AdminRoute = ({ children }) => {
+    if (loading) {
+      return (
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          Loading...
+        </div>
+      );
+    }
+
+    if (!currentUser) {
+      return <Navigate to="/login" />;
+    }
+
+    // 🔐 STRICT ADMIN CHECK
+    if (currentUser.role !== "Admin") {
+      return <Navigate to="/" />;
+    }
+
+    return children;
   };
 
   return (
     <Router>
-      <Navbar isLoggedIn={!!currentUser} />
+      {/* ================= NAVBAR ================= */}
+      <Navbar
+        isLoggedIn={!!currentUser}
+        role={currentUser?.role}
+        onLogout={handleLogout}
+      />
+
+      {/* ================= ROUTES ================= */}
       <Routes>
+        {/* PUBLIC */}
         <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
+
+        {/* USER */}
         <Route
           path="/profile"
           element={
-            <ProtectedRoute
-              element={<Profile user={currentUser} onLogout={handleLogout} />}
-            />
+            <ProtectedRoute>
+              <Profile user={currentUser} onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute
-              element={<Dashboard user={currentUser} onRegister={handleRegisterComplaint} />}
-            />
+            <ProtectedRoute>
+              <Dashboard user={currentUser} />
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/viewcomplaints"
           element={
-            <ProtectedRoute
-              element={
-                <ViewComplaints
-                  complaints={complaints}
-                  currentUser={currentUser}
-                  onUpdateComplaint={updateComplaintStatus}
-                />
-              }
-            />
+            <ProtectedRoute>
+              <ViewComplaints currentUser={currentUser} />
+            </ProtectedRoute>
           }
         />
+
+        {/* ADMIN */}
         <Route
-          path="/updatestatus"
+          path="/admin"
           element={
-            <ProtectedRoute
-              element={<UpdateStatus complaints={complaints} onUpdate={updateComplaintStatus} />}
-            />
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
           }
         />
+
+        {/* STATIC */}
         <Route path="/ipc-section" element={<IPCSection />} />
         <Route path="/child-safety" element={<Child />} />
         <Route path="/women-safety" element={<WomenSafety />} />
         <Route path="/cyber-security" element={<CyberSecurity />} />
-    
 
+        {/* FALLBACK */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+
+      {/* ================= AI CHATBOT (GLOBAL) ================= */}
+      <Chatbot />
     </Router>
   );
 }

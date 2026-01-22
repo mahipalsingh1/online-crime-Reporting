@@ -1,0 +1,286 @@
+/* ===============================
+   GLOBAL ADMIN CONTAINER
+================================ */
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(270deg, #020617, #0f172a, #020617);
+  background-size: 600% 600%;
+  animation: gradientFlow 15s ease infinite;
+  color: #e5e7eb;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ===============================
+   MAIN CONTENT
+================================ */
+.admin-main {
+  flex: 1;
+  padding: 35px;
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(25px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ===============================
+   SECTION
+================================ */
+.section {
+  background: rgba(255,255,255,0.06);
+  padding: 25px;
+  border-radius: 18px;
+  margin-bottom: 35px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+  animation: fadeIn 0.5s ease;
+}
+
+/* ===============================
+   STATS CARDS
+================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 25px;
+  margin-bottom: 35px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  padding: 25px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card span {
+  display: block;
+  margin-top: 10px;
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.stat-card.green {
+  background: linear-gradient(135deg, #047857, #22c55e);
+}
+
+.stat-card.yellow {
+  background: linear-gradient(135deg, #a16207, #facc15);
+  color: #111827;
+}
+
+.stat-card:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 25px 45px rgba(0,0,0,0.6);
+}
+
+/* ===============================
+   🔥 STATISTICS GRAPH (NEW)
+================================ */
+.stats-chart {
+  background: rgba(255,255,255,0.08);
+  padding: 25px;
+  border-radius: 18px;
+  margin-bottom: 40px;
+  box-shadow: 0 20px 45px rgba(0,0,0,0.4);
+  animation: fadeIn 0.6s ease;
+}
+
+.stats-chart h3 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #60a5fa;
+  letter-spacing: 1px;
+}
+
+/* ===============================
+   GRAPH BARS
+================================ */
+.bar-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 15px;
+}
+
+.bar-label {
+  width: 140px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.bar {
+  flex: 1;
+  height: 18px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  animation: growBar 1.4s ease forwards;
+  box-shadow: 0 0 15px rgba(255,255,255,0.35);
+}
+
+.bar-fill.pending {
+  background: linear-gradient(90deg, #facc15, #fde047);
+}
+
+.bar-fill.solved {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.bar-fill.invalid {
+  background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+.bar-fill.investigation {
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+@keyframes growBar {
+  from { width: 0; }
+  to { width: var(--bar-width); }
+}
+
+/* ===============================
+   FILTERS
+================================ */
+.filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.filters select {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  font-weight: 600;
+}
+
+/* ===============================
+   COMPLAINT CARDS
+================================ */
+.complaint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 25px;
+}
+
+.complaint-card {
+  background: rgba(255,255,255,0.95);
+  color: #111827;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.complaint-card:hover {
+  transform: translateY(-12px) scale(1.04);
+  box-shadow: 0 30px 55px rgba(0,0,0,0.55);
+}
+
+.complaint-card h4 {
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+
+/* ===============================
+   TABLE
+================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.95);
+  color: #111827;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+
+table thead {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  color: white;
+}
+
+table th,
+table td {
+  padding: 14px 12px;
+}
+
+table tbody tr:hover {
+  background: rgba(59,130,246,0.08);
+}
+
+/* ===============================
+   BUTTONS
+================================ */
+.btn-delete {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-delete:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 18px rgba(220,38,38,0.9);
+}
+
+/* ===============================
+   DEPARTMENTS
+================================ */
+.dept-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 25px;
+}
+
+.dept-card {
+  background: rgba(255,255,255,0.95);
+  color: #111827;
+  border-radius: 16px;
+  padding: 18px;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.dept-card:hover {
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 25px 40px rgba(0,0,0,0.4);
+}
+
+.dept-card img {
+  width: 100%;
+  height: 150px;
+  border-radius: 12px;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+/* ===============================
+   FADE IN
+================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
